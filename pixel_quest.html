@@ -257,13 +257,13 @@ function buildShadow(map, scale, ov){
 }
 function spriteSize(map, scale){ return { w: Math.max(...map.map(r=>r.length))*scale, h: map.length*scale }; }
 
-const HERO_SCALE = 6, MACE_SCALE = 6;
+const HERO_SCALE = 6, MACE_SCALE = 6, COIN_SCALE = 4, BOLT_SCALE = 5;
 const heroR = buildShadow(HERO, HERO_SCALE);
 const heroL = buildShadow(mirror(HERO), HERO_SCALE);
 const heroSize = spriteSize(HERO, HERO_SCALE);
 const maceShadow = buildShadow(MACE, MACE_SCALE);
-const coinShadow = buildShadow(COIN, 4);
-const boltShadow = buildShadow(BOLT, 5);
+const coinShadow = buildShadow(COIN, COIN_SCALE);
+const boltShadow = buildShadow(BOLT, BOLT_SCALE);
 
 /* =========================================================
    2. ROBOT TYPES  (increasing difficulty)
@@ -367,6 +367,7 @@ function makePlat(x,y,w,h,cls){
 function spawnCoin(x,y){
   const el=document.createElement('div'); el.className='coin';
   const s=document.createElement('div'); s.className='sprite'; s.style.boxShadow=coinShadow;
+  s.style.width=COIN_SCALE+'px'; s.style.height=COIN_SCALE+'px';
   el.appendChild(s); el.style.transform=`translate(${x}px,${y}px)`;
   worldEl.appendChild(el);
   coins.push({x,y,w:32,h:32,el,taken:false,base:y,phase:Math.random()*6.28});
@@ -375,6 +376,7 @@ function spawnEnemy(type,x,minX,maxX){
   const t=ROBO[type];
   const el=document.createElement('div'); el.className='enemy';
   const s=document.createElement('div'); s.className='sprite'; s.style.boxShadow=t.shadow;
+  s.style.width=t.scale+'px'; s.style.height=t.scale+'px';
   el.appendChild(s); worldEl.appendChild(el);
   enemies.push({ type, t, x, y:groundTop-t.h, w:t.w, h:t.h,
     dir:Math.random()<.5?-1:1, minX, maxX, speed:t.speed, hp:t.hp, alive:true,
@@ -432,9 +434,11 @@ function loadLevel(n){
   // player
   const pEl=document.createElement('div'); pEl.id='player';
   const pS=document.createElement('div'); pS.className='sprite'; pS.style.boxShadow=heroR;
+  pS.style.width=HERO_SCALE+'px'; pS.style.height=HERO_SCALE+'px';
   const maceWrap=document.createElement('div'); maceWrap.id='maceWrap';
   const maceInner=document.createElement('div'); maceInner.id='mace';
   const maceS=document.createElement('div'); maceS.className='sprite'; maceS.style.boxShadow=maceShadow;
+  maceS.style.width=MACE_SCALE+'px'; maceS.style.height=MACE_SCALE+'px';
   maceInner.appendChild(maceS); maceWrap.appendChild(maceInner);
   pEl.appendChild(pS); pEl.appendChild(maceWrap);
   worldEl.appendChild(pEl);
@@ -486,6 +490,7 @@ function shoot(){
   const by=player.y+player.h*0.42;
   const el=document.createElement('div'); el.className='bolt';
   const s=document.createElement('div'); s.className='sprite'; s.style.boxShadow=boltShadow;
+  s.style.width=BOLT_SCALE+'px'; s.style.height=BOLT_SCALE+'px';
   el.appendChild(s); worldEl.appendChild(el);
   bolts.push({x:bx,y:by,w:20,h:20,vx:dir*9,el,life:120});
 }
