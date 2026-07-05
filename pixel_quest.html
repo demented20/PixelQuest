@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hooded Quest — Robot Wars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%; overflow: hidden; background: #1a1516;
+    font-family: 'Press Start 2P', monospace; image-rendering: pixelated;
+    -webkit-font-smoothing: none;
+  }
+  :root {
+    --sky1:#4fa4b8; --sky2:#92e8c0; --sky3:#a4c443;
+    --grass:#63ab3f; --soil:#233b36; --brick:#8f4d57;
+    --ridge1:#686f99; --ridge2:#454a6a;
+  }
+
+  #viewport {
+    position: relative; width: 100vw; height: 100vh; overflow: hidden;
+    background: linear-gradient(var(--sky1) 0%, var(--sky2) 76%, var(--sky3) 100%);
+    transition: background 1.2s ease;
+  }
+
+  #bg { position:absolute; left:0; bottom:120px; width:7000px; height:42%; z-index:1; will-change:transform; }
+  .ridge { position:absolute; bottom:0; background:var(--ridge1);
+    clip-path: polygon(0% 100%,12% 40%,24% 72%,38% 25%,52% 66%,66% 30%,80% 60%,92% 35%,100% 100%); opacity:.85; }
+  .ridge.back { background:var(--ridge2); opacity:.55; }
+
+  #world { position:absolute; left:0; top:0; width:100%; height:100%; z-index:2; will-change:transform; }
+  .plat { position:absolute; left:0; top:0; will-change:transform; }
+  .ground { background:var(--soil); border-top:10px solid var(--grass); box-shadow: inset 0 18px 0 rgba(0,0,0,.18); }
+  .brick { background:var(--brick); border:4px solid rgba(0,0,0,.4);
+           box-shadow: inset 0 7px 0 rgba(255,255,255,.22), inset 0 -6px 0 rgba(0,0,0,.3); }
+
+  .sprite { position:absolute; left:0; top:0; will-change:transform; }
+
+  #player { position:absolute; left:0; top:0; z-index:7; will-change:transform; }
+  #maceWrap { position:absolute; left:0; top:0; z-index:6; }
+  #mace { transform-origin:2px 8px; }
+  #mace.swing { animation: swing .26s ease-out; }
+  @keyframes swing { 0%{transform:rotate(-55deg);} 55%{transform:rotate(80deg);} 100%{transform:rotate(0);} }
+
+  .enemy { position:absolute; left:0; top:0; z-index:5; will-change:transform; }
+  .coin  { position:absolute; left:0; top:0; z-index:4; will-change:transform; }
+  .bolt  { position:absolute; left:0; top:0; z-index:6; will-change:transform; }
+
+  .store { position:absolute; left:0; top:0; z-index:3; }
+  .store .hut { position:absolute; width:130px; height:120px; background:#8f4d57; border:5px solid #3d2936;
+                box-shadow: inset 0 10px 0 rgba(255,255,255,.15); }
+  .store .roof { position:absolute; top:-30px; left:-14px; width:158px; height:34px; background:#611e4a;
+                 clip-path: polygon(0 100%,50% 0,100% 100%); }
+  .store .door { position:absolute; bottom:0; left:47px; width:40px; height:60px; background:#1a1516; border:3px solid #ffee83; }
+  .store .sign { position:absolute; top:14px; left:0; width:130px; text-align:center; font-size:9px; color:#ffee83; text-shadow:2px 2px 0 #1a1516; }
+
+  #flag { position:absolute; left:0; top:0; z-index:4; }
+  #flag .pole { position:absolute; width:8px; background:#a3a7c2; box-shadow: inset -3px 0 0 #686f99; }
+  #flag .cloth { position:absolute; width:40px; height:28px; background:#a4c443;
+                 clip-path: polygon(0 0,100% 25%,0 50%); animation: wave .8s ease-in-out infinite; }
+  @keyframes wave { 50%{ clip-path: polygon(0 0,100% 38%,0 58%);} }
+
+  /* HUD */
+  .hud { position:absolute; z-index:20; color:#fff; text-shadow:2px 2px 0 #1a1516; user-select:none; }
+  #hearts { top:16px; left:18px; font-size:16px; letter-spacing:3px; color:#de523e; }
+  #coins  { top:16px; right:18px; font-size:13px; color:#ffee83; }
+  #level  { top:44px; right:18px; font-size:10px; color:#92e8c0; }
+  #weapon { top:44px; left:18px; font-size:9px; color:#a3a7c2; }
+  #controls { bottom:14px; left:50%; transform:translateX(-50%); font-size:8px; color:#a3a7c2; opacity:.75; text-align:center; }
+  #prompt { bottom:70px; left:50%; transform:translateX(-50%); font-size:11px; color:#ffee83;
+            background:rgba(26,21,22,.85); border:3px solid #ffee83; padding:8px 14px; display:none; }
+  #banner { top:38%; left:50%; transform:translateX(-50%); font-size:26px; color:#ffae70;
+            text-shadow:3px 3px 0 #81204f; opacity:0; text-align:center; }
+
+  /* screens */
+  .screen { position:absolute; inset:0; z-index:40; display:flex; flex-direction:column;
+            align-items:center; justify-content:center; gap:20px; text-align:center; padding:24px;
+            background:rgba(26,21,22,.93); color:#fff; }
+  .screen h1 { font-size:30px; color:#ffae70; text-shadow:3px 3px 0 #81204f; letter-spacing:2px; }
+  .screen h1.lose{ color:#de523e; } .screen h1.win{ color:#a4c443; }
+  .screen p { font-size:10px; line-height:2.1; color:#a3a7c2; max-width:560px; }
+  .screen .k { color:#ffee83; }
+  .btn { font-family:inherit; font-size:13px; color:#1a1516; background:#ffee83; border:4px solid #fff;
+         padding:14px 22px; cursor:pointer; box-shadow:5px 5px 0 #de523e; }
+  .btn:hover { background:#92e8c0; }
+  .hidden { display:none !important; }
+
+  /* shop */
+  #shop { position:absolute; inset:0; z-index:45; display:none; flex-direction:column; align-items:center;
+          justify-content:center; gap:16px; background:rgba(26,21,22,.94); color:#fff; padding:20px; }
+  #shop h2 { font-size:20px; color:#ffee83; text-shadow:2px 2px 0 #81204f; }
+  #shop .bal { font-size:12px; color:#f0b541; }
+  #shopList { display:flex; flex-direction:column; gap:10px; width:min(560px,92vw); }
+  .item { display:flex; align-items:center; justify-content:space-between; gap:10px;
+          background:#2c2025; border:3px solid #52333f; padding:12px 14px; }
+  .item .info { text-align:left; }
+  .item .nm { font-size:11px; color:#ffce91; }
+  .item .ds { font-size:8px; color:#a3a7c2; margin-top:6px; line-height:1.6; }
+  .item .buy { font-family:inherit; font-size:10px; color:#1a1516; background:#a4c443; border:3px solid #fff;
+               padding:8px 10px; cursor:pointer; white-space:nowrap; }
+  .item .buy:disabled { background:#454a6a; color:#a3a7c2; cursor:default; border-color:#686f99; }
+  #shop .close { font-size:9px; color:#a3a7c2; }
+
+  /* CRT */
+  #viewport::after { content:""; position:absolute; inset:0; z-index:30; pointer-events:none;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,.10) 0px, rgba(0,0,0,.10) 1px, transparent 2px, transparent 3px);
+    mix-blend-mode: multiply; }
+  #viewport::before { content:""; position:absolute; inset:0; z-index:29; pointer-events:none;
+    background: radial-gradient(ellipse at center, transparent 58%, rgba(26,21,22,.5) 100%); }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="bg"></div>
+  <div id="world"></div>
+
+  <div id="hearts" class="hud"></div>
+  <div id="coins" class="hud">COINS 0</div>
+  <div id="level" class="hud">LEVEL 1 / 5</div>
+  <div id="weapon" class="hud">WEAPON: FISTS</div>
+  <div id="prompt" class="hud">&#9650; PRESS E — ENTER SHOP</div>
+  <div id="banner" class="hud"></div>
+  <div id="controls" class="hud">&larr; &rarr; / A D MOVE &nbsp;·&nbsp; SPACE / W JUMP &nbsp;·&nbsp; J MACE &nbsp;·&nbsp; K BLAST &nbsp;·&nbsp; E SHOP</div>
+
+  <div id="startScreen" class="screen">
+    <h1>HOODED QUEST</h1>
+    <p>The robots have overrun 5 worlds. Run, jump and smash your way to each flag.
+       Collect coins, visit the <span class="k">shop</span> to buy weapons, and take down 5 kinds of machine.</p>
+    <p><span class="k">&larr; &rarr; / A D</span> move &nbsp;·&nbsp; <span class="k">SPACE / W / &uarr;</span> jump &nbsp;·&nbsp;
+       <span class="k">J</span> mace &nbsp;·&nbsp; <span class="k">K</span> blaster &nbsp;·&nbsp; <span class="k">E</span> shop</p>
+    <button class="btn" id="startBtn">&gt; BEGIN &lt;</button>
+  </div>
+
+  <div id="endScreen" class="screen hidden">
+    <h1 id="endTitle">GAME OVER</h1>
+    <p id="endMsg"></p>
+    <button class="btn" id="restartBtn">&gt; PLAY AGAIN &lt;</button>
+  </div>
+
+  <div id="shop">
+    <h2>ROBOT-PARTS SHOP</h2>
+    <div class="bal" id="shopBal">COINS: 0</div>
+    <div id="shopList"></div>
+    <div class="close">PRESS E OR ESC TO LEAVE</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   1. SPRITES
+   ========================================================= */
+const COL = {
+  d:'#1a1516',
+  R:'#c0334a', r:'#de523e', s:'#7a2540', W:'#f4f4f4', E:'#1a1516', O:'#1a1516',
+  H:'#d9a066', M:'#c0c6d6', L:'#ffffff',
+  A:'#a3a7c2', a:'#454a6a', X:'#4fa4b8', o:'#8f4d57', C:'#f0b541', c:'#ffee83',
+  P:'#ffee83', p:'#de523e'
+};
+
+const HERO = [
+  "....dddd....",
+  "..ddRRRRdd..",
+  ".dRRRRRRRRd.",
+  ".dRRRRRRRRd.",
+  ".dRWWWWWWRd.",
+  ".dRWEWWEWRd.",
+  ".dRWWWWWWRd.",
+  ".dRRWWWWRRd.",
+  ".drRRRRRRrd.",
+  ".dRRRRRRRRd.",
+  ".dsRRRRRRsd.",
+  "..dRRRRRRd..",
+  "...dOOOOd...",
+  "...dO..Od..."
+];
+
+const MACE = [
+  "........dd..",
+  ".......dMMd.",
+  "......dMLMd.",
+  "dHHHHHdMMMd.",
+  "dHHHHHdMMMd.",
+  "......dMLMd.",
+  ".......dMMd.",
+  "........dd.."
+];
+
+const R_A = [
+  "..dddddd..",
+  ".dAAAAAAd.",
+  "dAXXXXXXAd",
+  "dAXXXXXXAd",
+  "dAAAAAAAAd",
+  "dAaAAAAaAd",
+  ".dAAAAAAd.",
+  ".dd.dd.dd.",
+  "..d....d.."
+];
+const R_B = [
+  "...dddd...",
+  "..dAAAAd..",
+  ".dAXXXXAd.",
+  ".dAXXXXAd.",
+  "dAAAAAAAAd",
+  "dAAAAAAAAd",
+  ".dAAAAAAd.",
+  "dOOdddOOd.",
+  "dOOd..dOOd"
+];
+const R_C = [
+  "..dddddddd..",
+  ".dAAAAAAAAd.",
+  "dAXXXXXXXXAd",
+  "dAXXXXXXXXAd",
+  "dAAAAAAAAAAd",
+  "dAaaAAAAaaAd",
+  "dAAAAAAAAAAd",
+  "dOOddddddOOd",
+  ".dOOd..dOOd."
+];
+
+const COIN = [
+  "..cccc..",
+  ".cCCCCc.",
+  "cCCoCCCc",
+  "cCoCCCCc",
+  "cCCCCoCc",
+  "cCCCCCCc",
+  ".cCCCCc.",
+  "..cccc.."
+];
+const BOLT = [
+  ".PP.",
+  "PppP",
+  "PppP",
+  ".PP."
+];
+
+function mirror(m){ return m.map(r => r.split("").reverse().join("")); }
+function buildShadow(map, scale, ov){
+  const parts=[];
+  for(let y=0;y<map.length;y++){
+    const row=map[y];
+    for(let x=0;x<row.length;x++){
+      const ch=row[x];
+      if(ch==='.'||ch===' ') continue;
+      const c=(ov&&ov[ch])||COL[ch]||'#fff';
+      parts.push(`${x*scale}px ${y*scale}px 0 0 ${c}`);
+    }
+  }
+  return parts.join(',');
+}
+function spriteSize(map, scale){ return { w: Math.max(...map.map(r=>r.length))*scale, h: map.length*scale }; }
+
+const HERO_SCALE = 6, MACE_SCALE = 6;
+const heroR = buildShadow(HERO, HERO_SCALE);
+const heroL = buildShadow(mirror(HERO), HERO_SCALE);
+const heroSize = spriteSize(HERO, HERO_SCALE);
+const maceShadow = buildShadow(MACE, MACE_SCALE);
+const coinShadow = buildShadow(COIN, 4);
+const boltShadow = buildShadow(BOLT, 5);
+
+/* =========================================================
+   2. ROBOT TYPES  (increasing difficulty)
+   ========================================================= */
+const ROBO = {
+  scout:    { map:R_A, scale:5, body:'#a3a7c2', accent:'#4fa4b8', hp:1, speed:1.0, coins:2,  armored:false, jump:false },
+  roller:   { map:R_B, scale:5, body:'#686f99', accent:'#ffae70', hp:1, speed:2.3, coins:3,  armored:false, jump:false },
+  trooper:  { map:R_A, scale:6, body:'#8f9aa8', accent:'#a4c443', hp:2, speed:1.4, coins:4,  armored:false, jump:false },
+  tank:     { map:R_C, scale:6, body:'#8f4d57', accent:'#de523e', hp:3, speed:0.85,coins:7,  armored:true,  jump:false },
+  sentinel: { map:R_C, scale:7, body:'#611e4a', accent:'#ffee83', hp:5, speed:1.7, coins:14, armored:true,  jump:true  }
+};
+Object.values(ROBO).forEach(t=>{
+  t.shadow = buildShadow(t.map, t.scale, { A:t.body, a:'#2c2025', X:t.accent });
+  const sz = spriteSize(t.map, t.scale);
+  t.spriteW = sz.w; t.spriteH = sz.h;
+  t.w = Math.round(sz.w*0.78); t.h = Math.round(sz.h*0.82);
+});
+
+/* =========================================================
+   3. CONSTANTS
+   ========================================================= */
+const GRAVITY=0.8, JUMP_V=-15.8, MOVE_ACC=0.95, FRICTION=0.78, STOMP_BOUNCE=-10;
+const GROUND_H=140;
+const VH=()=>window.innerHeight;
+
+/* =========================================================
+   4. PERSISTENT SAVE + RUNTIME STATE
+   ========================================================= */
+const save = { coins:0, hearts:3, maxHearts:5, level:1,
+  items:{ mace:false, power:false, blaster:false, boots:false } };
+
+let platforms, enemies, coins, bolts, store, flagX, player, groundTop;
+let camX=0, state='start', invuln=0;
+let attackCD=0, attackActive=0, swingHit, shootCD=0;
+let nearStore=false, bannerTimer=0;
+const keys={left:false,right:false,jump:false};
+
+/* DOM refs */
+const D = id => document.getElementById(id);
+const worldEl=D('world'), bgEl=D('bg'), heartsEl=D('hearts'), coinsEl=D('coins'),
+      levelEl=D('level'), weaponEl=D('weapon'), promptEl=D('prompt'), bannerEl=D('banner'),
+      startScreen=D('startScreen'), endScreen=D('endScreen'), endTitle=D('endTitle'),
+      endMsg=D('endMsg'), shopEl=D('shop'), shopList=D('shopList'), shopBal=D('shopBal');
+
+/* =========================================================
+   5. LEVELS  (5 themed worlds, harder each time)
+   ========================================================= */
+const THEMES = [
+  { sky:['#4fa4b8','#92e8c0','#a4c443'], grass:'#63ab3f', soil:'#233b36', brick:'#8f4d57', ridge:['#686f99','#454a6a'], name:'EMERALD MEADOW' },
+  { sky:['#368782','#2a594f','#233b36'], grass:'#3b7d4f', soil:'#21181b', brick:'#52333f', ridge:['#454a6a','#1d2235'], name:'DEEP FOREST' },
+  { sky:['#ffce91','#ffae70','#f0b541'], grass:'#c8d45d', soil:'#8f4d57', brick:'#bd6a62', ridge:['#ffae70','#8f4d57'], name:'SUNSCORCH DUNES' },
+  { sky:['#52333f','#81204f','#ad2f45'], grass:'#de523e', soil:'#2c2025', brick:'#611e4a', ridge:['#81204f','#3d2936'], name:'VOLCANIC CORE' },
+  { sky:['#1d2235','#454a6a','#686f99'], grass:'#611e4a', soil:'#21181b', brick:'#368782', ridge:['#454a6a','#1d2235'], name:'NEON MIDNIGHT' }
+];
+
+const LEVELS = [
+  { len:4200, store:820,
+    segs:[[0,940],[1080,1900],[2040,3100],[3240,4200]],
+    bricks:[[560,180,120],[820,270,90],[1300,180,130],[1600,270,110],[2260,190,120],[2560,290,120],[3500,190,140]],
+    enemies:[['scout',680,560,900],['scout',1350,1120,1780],['roller',1650,1120,1860],['scout',2500,2080,3060],['roller',3500,3280,3980]] },
+
+  { len:4600, store:760,
+    segs:[[0,900],[1040,1780],[1920,2760],[2900,3760],[3900,4600]],
+    bricks:[[520,180,110],[1200,200,120],[1500,290,100],[2100,190,120],[2400,290,120],[3050,200,130],[3980,200,140]],
+    enemies:[['scout',640,540,880],['roller',1250,1060,1740],['trooper',1500,1060,1740],['roller',2200,1940,2720],['trooper',3100,2920,3720],['scout',4000,3920,4560]] },
+
+  { len:5000, store:700,
+    segs:[[0,880],[1020,1720],[1860,2620],[2760,3560],[3700,4520],[4660,5000]],
+    bricks:[[500,200,110],[1150,210,120],[1420,300,100],[2000,200,120],[2300,300,120],[2900,210,130],[3900,210,140]],
+    enemies:[['roller',620,520,860],['trooper',1200,1040,1700],['trooper',1450,1040,1700],['tank',2100,1880,2600],['roller',2900,2780,3540],['tank',3950,3720,4500]] },
+
+  { len:5400, store:640,
+    segs:[[0,860],[1000,1680],[1820,2540],[2680,3420],[3560,4340],[4480,5400]],
+    bricks:[[480,210,110],[1120,220,120],[1400,310,100],[1960,210,120],[2260,310,120],[3620,220,130],[4600,220,140]],
+    enemies:[['trooper',600,500,840],['tank',1180,1020,1660],['roller',1420,1020,1660],['tank',2100,1840,2520],['trooper',2900,2700,3400],['sentinel',3900,3580,4320],['tank',4700,4500,5360]] },
+
+  { len:6000, store:600,
+    segs:[[0,840],[980,1640],[1780,2480],[2620,3340],[3480,4260],[4400,5200],[5340,6000]],
+    bricks:[[460,220,110],[1080,230,120],[1360,320,100],[1900,220,120],[2200,320,120],[3540,230,130],[5420,230,140]],
+    enemies:[['tank',580,480,820],['trooper',1120,1000,1620],['sentinel',1380,1000,1620],['tank',2000,1800,2460],['sentinel',2900,2640,3320],['tank',3900,3500,4240],['sentinel',4700,4420,5180],['trooper',5500,5360,5980]] }
+];
+
+/* =========================================================
+   6. LEVEL LOADER
+   ========================================================= */
+function applyTheme(t){
+  const r=document.documentElement.style;
+  r.setProperty('--sky1',t.sky[0]); r.setProperty('--sky2',t.sky[1]); r.setProperty('--sky3',t.sky[2]);
+  r.setProperty('--grass',t.grass); r.setProperty('--soil',t.soil); r.setProperty('--brick',t.brick);
+  r.setProperty('--ridge1',t.ridge[0]); r.setProperty('--ridge2',t.ridge[1]);
+}
+
+function makePlat(x,y,w,h,cls){
+  const el=document.createElement('div');
+  el.className='plat '+cls;
+  el.style.width=w+'px'; el.style.height=h+'px';
+  el.style.transform=`translate(${x}px,${y}px)`;
+  worldEl.appendChild(el);
+  return {x,y,w,h,el};
+}
+function spawnCoin(x,y){
+  const el=document.createElement('div'); el.className='coin';
+  const s=document.createElement('div'); s.className='sprite'; s.style.boxShadow=coinShadow;
+  el.appendChild(s); el.style.transform=`translate(${x}px,${y}px)`;
+  worldEl.appendChild(el);
+  coins.push({x,y,w:32,h:32,el,taken:false,base:y,phase:Math.random()*6.28});
+}
+function spawnEnemy(type,x,minX,maxX){
+  const t=ROBO[type];
+  const el=document.createElement('div'); el.className='enemy';
+  const s=document.createElement('div'); s.className='sprite'; s.style.boxShadow=t.shadow;
+  el.appendChild(s); worldEl.appendChild(el);
+  enemies.push({ type, t, x, y:groundTop-t.h, w:t.w, h:t.h,
+    dir:Math.random()<.5?-1:1, minX, maxX, speed:t.speed, hp:t.hp, alive:true,
+    el, sprite:s, vy:0, jt:Math.random()*120 });
+}
+
+function loadLevel(n){
+  worldEl.innerHTML=''; bgEl.innerHTML='';
+  const cfg=LEVELS[n-1], theme=THEMES[n-1];
+  applyTheme(theme);
+  groundTop=VH()-GROUND_H;
+  platforms=[]; enemies=[]; coins=[]; bolts=[];
+
+  cfg.segs.forEach(([x0,x1])=> platforms.push(makePlat(x0,groundTop,x1-x0,GROUND_H+80,'ground')));
+  cfg.bricks.forEach(([x,up,w])=> platforms.push(makePlat(x,groundTop-up,w,28,'brick')));
+
+  // auto coins: arcs over pits
+  for(let i=0;i<cfg.segs.length-1;i++){
+    const x0=cfg.segs[i][1], x1=cfg.segs[i+1][0];
+    const span=x1-x0;
+    for(let k=0;k<5;k++){ const tt=k/4; spawnCoin(x0+span*tt, groundTop-40-Math.sin(tt*Math.PI)*100); }
+  }
+  // coins over bricks
+  cfg.bricks.forEach(([x,up,w])=>{ for(let k=0;k<3;k++) spawnCoin(x+18+k*44, groundTop-up-52); });
+  // ground coin rows
+  cfg.segs.forEach(([x0,x1])=>{ for(let cx=x0+180; cx<x1-120; cx+=520) for(let k=0;k<3;k++) spawnCoin(cx+k*44, groundTop-64); });
+
+  cfg.enemies.forEach(([type,x,mn,mx])=> spawnEnemy(type,x,mn,mx));
+
+  // store
+  store={x:cfg.store, y:groundTop-120, w:130, h:120, zone:{x:cfg.store+30,y:groundTop-120,w:70,h:120}};
+  const st=document.createElement('div'); st.className='store';
+  st.style.transform=`translate(${store.x}px,${store.y}px)`;
+  st.innerHTML='<div class="roof"></div><div class="hut"></div><div class="door"></div><div class="sign">SHOP</div>';
+  worldEl.appendChild(st);
+
+  // flag
+  const lastSeg=cfg.segs[cfg.segs.length-1];
+  flagX=lastSeg[1]-120;
+  const flag=document.createElement('div'); flag.id='flag';
+  const poleH=260;
+  flag.innerHTML=
+    `<div class="pole" style="height:${poleH}px;transform:translate(${flagX}px,${groundTop-poleH}px)"></div>`+
+    `<div class="cloth" style="transform:translate(${flagX+8}px,${groundTop-poleH+6}px)"></div>`;
+  worldEl.appendChild(flag);
+
+  // parallax ridges
+  for(let i=0;i<12;i++){
+    const b=document.createElement('div'); b.className='ridge back';
+    b.style.left=(i*600)+'px'; b.style.width='740px'; b.style.height='100%'; bgEl.appendChild(b);
+    const f=document.createElement('div'); f.className='ridge';
+    f.style.left=(i*600+230)+'px'; f.style.width='620px'; f.style.height='78%'; bgEl.appendChild(f);
+  }
+
+  // player
+  const pEl=document.createElement('div'); pEl.id='player';
+  const pS=document.createElement('div'); pS.className='sprite'; pS.style.boxShadow=heroR;
+  const maceWrap=document.createElement('div'); maceWrap.id='maceWrap';
+  const maceInner=document.createElement('div'); maceInner.id='mace';
+  const maceS=document.createElement('div'); maceS.className='sprite'; maceS.style.boxShadow=maceShadow;
+  maceInner.appendChild(maceS); maceWrap.appendChild(maceInner);
+  pEl.appendChild(pS); pEl.appendChild(maceWrap);
+  worldEl.appendChild(pEl);
+
+  player={ x:120, y:groundTop-heroSize.h, w:44, h:78, vx:0, vy:0, onGround:false, facing:1,
+           el:pEl, sprite:pS, maceWrap, maceInner };
+  player.lastSafe={x:player.x,y:player.y};
+
+  camX=0;
+  levelEl.textContent=`LEVEL ${n} / 5`;
+  showBanner(`LEVEL ${n}\n${theme.name}`);
+  updateHUD();
+}
+
+/* =========================================================
+   7. INPUT
+   ========================================================= */
+function handleKey(down){
+  return e=>{
+    switch(e.key){
+      case 'ArrowLeft': case 'a': case 'A': keys.left=down; break;
+      case 'ArrowRight': case 'd': case 'D': keys.right=down; break;
+      case 'ArrowUp': case 'w': case 'W': case ' ': keys.jump=down; e.preventDefault(); break;
+      case 'j': case 'J': if(down) meleeAttack(); break;
+      case 'k': case 'K': if(down) shoot(); break;
+      case 'e': case 'E': if(down) toggleShop(); break;
+      case 'Escape': if(down && state==='shop') closeShop(); break;
+      case 'Enter': if(down && state!=='play' && state!=='shop') startGame(); break;
+    }
+  };
+}
+document.addEventListener('keydown',handleKey(true));
+document.addEventListener('keyup',handleKey(false));
+
+/* =========================================================
+   8. COMBAT
+   ========================================================= */
+function meleeAttack(){
+  if(state!=='play' || !save.items.mace || attackCD>0) return;
+  attackCD=26; attackActive=12; swingHit=new Set();
+  const m=player.maceInner;
+  m.classList.remove('swing'); void m.offsetWidth; m.classList.add('swing');
+}
+function shoot(){
+  if(state!=='play' || !save.items.blaster || shootCD>0) return;
+  shootCD=22;
+  const dir=player.facing;
+  const bx=dir>0? player.x+player.w : player.x-20;
+  const by=player.y+player.h*0.42;
+  const el=document.createElement('div'); el.className='bolt';
+  const s=document.createElement('div'); s.className='sprite'; s.style.boxShadow=boltShadow;
+  el.appendChild(s); worldEl.appendChild(el);
+  bolts.push({x:bx,y:by,w:20,h:20,vx:dir*9,el,life:120});
+}
+function meleeDamage(){ return 1 + (save.items.power?1:0); }
+
+function killEnemy(en){
+  en.alive=false; en.el.style.display='none';
+  save.coins+=en.t.coins; updateHUD();
+}
+function damageEnemy(en,dmg){
+  en.hp-=dmg;
+  if(en.hp<=0) killEnemy(en);
+  else { en.sprite.style.filter='brightness(2.2)'; setTimeout(()=>{ if(en.sprite) en.sprite.style.filter=''; },80); }
+}
+
+/* =========================================================
+   9. SHOP
+   ========================================================= */
+const ITEMS=[
+  { id:'mace',    name:'IRON MACE',    price:12, desc:'Melee attack (press J). Needed to hurt armored bots.',
+    owned:()=>save.items.mace, buy:()=>{save.items.mace=true;} },
+  { id:'power',   name:'POWER CORE',   price:26, desc:'+1 mace damage. Requires the mace.',
+    owned:()=>save.items.power, can:()=>save.items.mace, buy:()=>{save.items.power=true;} },
+  { id:'blaster', name:'ARC BLASTER',  price:32, desc:'Ranged bolt (press K). Pierces armor, hits flyers.',
+    owned:()=>save.items.blaster, buy:()=>{save.items.blaster=true;} },
+  { id:'repair',  name:'REPAIR KIT',   price:15, desc:'+1 heart (max 5). Buy as many as you need.',
+    owned:()=>false, can:()=>save.hearts<save.maxHearts, buy:()=>{save.hearts=Math.min(save.maxHearts,save.hearts+1);} },
+  { id:'boots',   name:'SWIFT BOOTS',  price:20, desc:'Move faster and jump a touch higher.',
+    owned:()=>save.items.boots, buy:()=>{save.items.boots=true;} }
+];
+
+function renderShop(){
+  shopBal.textContent='COINS: '+save.coins;
+  shopList.innerHTML='';
+  ITEMS.forEach(it=>{
+    const row=document.createElement('div'); row.className='item';
+    const owned=it.owned();
+    const locked=it.can?!it.can():false;
+    const afford=save.coins>=it.price;
+    let label, disabled=false;
+    if(owned){ label='OWNED'; disabled=true; }
+    else if(locked && it.id==='power'){ label='NEED MACE'; disabled=true; }
+    else if(locked && it.id==='repair'){ label='HEARTS FULL'; disabled=true; }
+    else if(!afford){ label=it.price+'c'; disabled=true; }
+    else { label='BUY '+it.price+'c'; }
+    row.innerHTML=`<div class="info"><div class="nm">${it.name}</div><div class="ds">${it.desc}</div></div>`;
+    const btn=document.createElement('button'); btn.className='buy'; btn.textContent=label; btn.disabled=disabled;
+    btn.addEventListener('click',()=>{
+      if(save.coins>=it.price && !it.owned() && (!it.can || it.can())){
+        save.coins-=it.price; it.buy(); updateHUD(); renderShop();
+      }
+    });
+    row.appendChild(btn); shopList.appendChild(row);
+  });
+}
+function toggleShop(){
+  if(state==='play' && nearStore) openShop();
+  else if(state==='shop') closeShop();
+}
+function openShop(){ state='shop'; shopEl.style.display='flex'; renderShop(); }
+function closeShop(){ shopEl.style.display='none'; state='play'; }
+
+/* =========================================================
+   10. PHYSICS / UPDATE
+   ========================================================= */
+function overlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+
+function update(){
+  if(state!=='play'){ if(bannerTimer>0){bannerTimer--; renderBanner();} return; }
+
+  const maxSpeed = save.items.boots?7.0:5.6;
+  const jumpV = save.items.boots?JUMP_V-1.2:JUMP_V;
+
+  if(keys.left){ player.vx-=MOVE_ACC; player.facing=-1; }
+  if(keys.right){ player.vx+=MOVE_ACC; player.facing=1; }
+  if(!keys.left && !keys.right) player.vx*=FRICTION;
+  player.vx=Math.max(-maxSpeed,Math.min(maxSpeed,player.vx));
+
+  player.x+=player.vx;
+  for(const p of platforms){ if(overlap(player,p)){
+    if(player.vx>0) player.x=p.x-player.w; else if(player.vx<0) player.x=p.x+p.w;
+    player.vx=0;
+  }}
+  if(player.x<0){ player.x=0; player.vx=0; }
+
+  if(keys.jump && player.onGround){ player.vy=jumpV; player.onGround=false; }
+
+  player.vy+=GRAVITY; if(player.vy>19) player.vy=19;
+  player.y+=player.vy; player.onGround=false;
+  for(const p of platforms){ if(overlap(player,p)){
+    if(player.vy>0){ player.y=p.y-player.h; player.onGround=true; }
+    else if(player.vy<0) player.y=p.y+p.h;
+    player.vy=0;
+  }}
+  if(player.onGround){ player.lastSafe.x=player.x; player.lastSafe.y=player.y-4; }
+
+  // enemies
+  for(const en of enemies){
+    if(!en.alive) continue;
+    en.x+=en.dir*en.speed;
+    if(en.x<en.minX){ en.x=en.minX; en.dir=1; }
+    if(en.x+en.w>en.maxX){ en.x=en.maxX-en.w; en.dir=-1; }
+    if(en.t.jump){ en.jt--; if(en.jt<=0){ en.vy=-11; en.jt=100+Math.random()*80; } }
+    if(en.vy!==0 || en.y<groundTop-en.h){ en.vy+=GRAVITY; en.y+=en.vy; if(en.y>=groundTop-en.h){ en.y=groundTop-en.h; en.vy=0; } }
+
+    if(overlap(player,en)){
+      const stomping = player.vy>0 && (player.y+player.h-en.y)<28;
+      if(stomping){
+        player.vy=STOMP_BOUNCE;
+        if(en.t.armored){ /* clang, no damage */ }
+        else damageEnemy(en,1);
+      } else if(invuln<=0){ hurt(); }
+    }
+  }
+
+  // melee hit window
+  if(attackActive>0){
+    const reach=54;
+    const hb={ x: player.facing>0?player.x+player.w-6:player.x-reach+6, y:player.y+10, w:reach, h:player.h-18 };
+    for(const en of enemies){ if(en.alive && !swingHit.has(en) && overlap(hb,en)){ swingHit.add(en); damageEnemy(en,meleeDamage()); } }
+    attackActive--;
+  }
+  if(attackCD>0) attackCD--;
+  if(shootCD>0) shootCD--;
+
+  // bolts
+  for(const b of bolts){
+    if(b.dead) continue;
+    b.x+=b.vx; b.life--;
+    let hit=false;
+    for(const en of enemies){ if(en.alive && overlap(b,en)){ damageEnemy(en,1); hit=true; break; } }
+    if(hit || b.life<=0){ b.dead=true; b.el.remove(); }
+  }
+  bolts=bolts.filter(b=>!b.dead);
+
+  // coins
+  for(const c of coins){ if(!c.taken && overlap(player,c)){ c.taken=true; c.el.style.display='none'; save.coins++; updateHUD(); } }
+
+  // store proximity
+  nearStore = overlap(player, store.zone);
+  promptEl.style.display = nearStore ? 'block' : 'none';
+
+  // pit fall
+  if(player.y>VH()+80){
+    hurt();
+    if(state==='play'){ player.x=player.lastSafe.x; player.y=player.lastSafe.y-60; player.vx=0; player.vy=0; }
+  }
+
+  // reach flag -> next level / win
+  if(player.x+player.w>=flagX) advanceLevel();
+
+  if(invuln>0) invuln--;
+
+  const target=player.x-window.innerWidth*0.32;
+  camX=Math.max(0,target);
+  if(bannerTimer>0) bannerTimer--;
+
+  render();
+}
+
+/* =========================================================
+   11. RENDER
+   ========================================================= */
+function render(){
+  worldEl.style.transform=`translateX(${-camX}px)`;
+  bgEl.style.transform=`translateX(${-camX*0.35}px)`;
+
+  const sx=player.x-(heroSize.w-player.w)/2;
+  const sy=player.y+player.h-heroSize.h;
+  player.el.style.transform=`translate(${sx}px,${sy}px)`;
+  player.sprite.style.boxShadow = player.facing===1?heroR:heroL;
+
+  // mace position/facing (only meaningful if owned)
+  player.maceWrap.style.display = save.items.mace?'block':'none';
+  if(save.items.mace){
+    const hx = player.facing>0? (heroSize.w-player.w)/2 + player.w - 6 : (heroSize.w-player.w)/2 - 18;
+    player.maceWrap.style.left = hx+'px';
+    player.maceWrap.style.top  = (player.h*0.5)+'px';
+    player.maceWrap.style.transform = `scaleX(${player.facing})`;
+    player.maceWrap.style.transformOrigin='0 0';
+  }
+
+  if(invuln>0) player.el.style.opacity=(Math.floor(invuln/4)%2)?'0.25':'1';
+  else player.el.style.opacity='1';
+
+  for(const en of enemies){ if(en.alive) en.el.style.transform=`translate(${en.x}px,${en.y}px)`; }
+  for(const c of coins){ if(!c.taken){ c.phase+=0.12; const sq=Math.abs(Math.cos(c.phase)); c.el.style.transform=`translate(${c.x}px,${c.base}px) scaleX(${0.35+0.65*sq})`; } }
+  for(const b of bolts){ b.el.style.transform=`translate(${b.x}px,${b.y}px)`; }
+
+  renderBanner();
+}
+function renderBanner(){ bannerEl.style.opacity = bannerTimer>0 ? Math.min(1,bannerTimer/30) : 0; }
+
+/* =========================================================
+   12. HUD / STATE TRANSITIONS
+   ========================================================= */
+function updateHUD(){
+  let h=''; for(let i=0;i<save.maxHearts;i++) h += i<save.hearts?'♥':'·';
+  heartsEl.textContent=h;
+  coinsEl.textContent='COINS '+save.coins;
+  const w = !save.items.mace?'FISTS':(save.items.power?'MACE+':'MACE');
+  weaponEl.textContent='WEAPON: '+w+(save.items.blaster?' + BLASTER':'');
+}
+function showBanner(text){ bannerEl.textContent=text; bannerEl.style.whiteSpace='pre'; bannerTimer=120; }
+
+function hurt(){
+  if(invuln>0) return;
+  save.hearts--; invuln=90;
+  player.vy=-8; player.vx=-player.facing*6;
+  updateHUD();
+  if(save.hearts<=0) gameOver();
+}
+function gameOver(){
+  state='over';
+  endTitle.textContent='GAME OVER'; endTitle.className='lose';
+  endMsg.innerHTML='The machines won this time.<br>You reached <span class="k">Level '+save.level+'</span> with <span class="k">'+save.coins+'</span> coins.';
+  endScreen.classList.remove('hidden');
+}
+function advanceLevel(){
+  if(save.level>=5){ win(); return; }
+  save.level++;
+  loadLevel(save.level);
+}
+function win(){
+  state='won';
+  endTitle.textContent='ALL WORLDS CLEARED!'; endTitle.className='win';
+  endMsg.innerHTML='You beat every robot across 5 worlds.<br>Final coins: <span class="k">'+save.coins+'</span> · Hearts left: <span class="k">'+save.hearts+'</span>';
+  endScreen.classList.remove('hidden');
+}
+function startGame(){
+  save.coins=0; save.hearts=3; save.maxHearts=5; save.level=1;
+  save.items={ mace:false, power:false, blaster:false, boots:false };
+  invuln=0; attackCD=0; attackActive=0; shootCD=0; nearStore=false;
+  startScreen.classList.add('hidden'); endScreen.classList.add('hidden'); shopEl.style.display='none';
+  loadLevel(1);
+  state='play';
+  render();
+}
+
+D('startBtn').addEventListener('click',startGame);
+D('restartBtn').addEventListener('click',startGame);
+
+/* =========================================================
+   13. BOOT
+   ========================================================= */
+groundTop=VH()-GROUND_H;
+updateHUD();
+function frame(){ update(); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
