@@ -10,7 +10,7 @@
 
 **Hooded Quest: Robot Wars** is a retro-style side-scrolling platformer that runs entirely in the browser no dependencies, no build step, no install. Just a single HTML file you can open and play. You're a hooded hero fighting your way through 5 machine-overrun worlds, platforming across gaps, stomping and smashing robots, collecting coins, and gearing up at mid-level shops to take on increasingly brutal enemies.
 
-The whole game physics, sprites, level design, shop system, enemy AI, parallax scrolling — lives inside one self-contained `pixel_quest.html`, weighing under 750 lines of vanilla JavaScript.
+The whole game physics, sprites, level design, shop system, enemy AI, parallax scrolling , lives inside one self-contained `pixel_quest.html`, weighing under 750 lines of vanilla JavaScript.
 
 ---
 
