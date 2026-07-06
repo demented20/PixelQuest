@@ -18,7 +18,7 @@ The whole game physics, sprites, level design, shop system, enemy AI, parallax s
 
 **Hackathon Weekly** is a recurring competitive hackathon format where developers and makers compete in tight time constraints around a central theme. This edition's theme was **Fable 5**, with participants given early model access to build something creative using it. The constraint: **3 hours to build and present**.
 
-The project took home the **Best Upcoming Edition Award** — recognising the most promising build in the category.
+The project took home the **Best Upcoming Edition Award** recognising the most promising build in the category.
 
 ---
 
