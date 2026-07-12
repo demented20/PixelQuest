@@ -1,7 +1,7 @@
 
 # 🎮 PixelQuest : Robot Wars
 
-> **🏆 Best Upcoming Edition Award**  Hackathon Weekly  
+> **🏆 Best Upcoming Edition Award**  at Hackathon Weekly  
 > Built in 3 hours with early access to **Fable 5**
 
 ---
